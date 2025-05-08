@@ -48,6 +48,54 @@ CodeCoverage/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
+# Default ignored files
+/shelf/
+/workspace.xml
+# Rider ignored files
+/projectSettingsUpdater.xml
+/.idea.ListingService.iml
+/modules.xml
+/contentModel.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.stackdump
+
+# Linux
+*.directory
+.Trash-*
+
+# Common backup/swap files
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+
+# NUnit
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+
+# IntelliJ / Rider / WebStorm / PyCharm osv.
+.idea/
+*.iml
 # NUnit
 *.VisualState.xml
 TestResult.xml
