@@ -1,13 +1,11 @@
 using AuctionService.Models
 using AuctionService.Services
-    using MongoDB.Driver
-    using System.Text.Json.Serialization
-    
-    
-    
-    
+using MongoDB.Driver
+using System.Text.Json.Serialization
     
 var builder = WebApplication.CreateBuilder(args);
+
+var mongoConn = builder.Configuration["MongoConnectionString"];
 
 
 builder.Services.AddEndpointsApiExplorer();
