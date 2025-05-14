@@ -16,7 +16,10 @@
       "launchUrl": "swagger",
       "applicationUrl": "http://localhost:5216",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "MongoConnectionString": "mongodb+srv://admin:123@dbcollectioneksamen.ea3lrr1.mongodb.net/?retryWrites=true&w=majority&appName=DBCollectionEksamen",
+        "CatalogDatabase": "AuctionDB",
+        "CatalogCollection": "Auctions"
       }
     },
     "https": {

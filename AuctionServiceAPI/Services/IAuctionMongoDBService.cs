@@ -1,6 +1,10 @@
-﻿namespace DefaultNamespace;
+﻿using AuctionService.Models;
 
-public class IAuctionMongoDBService
+namespace AuctionService.Services;
+
+public interface IAuctionMongoDBService
 {
-    
+    Task<List<Auction>> CreateAuctionsFromCatalog(Guid catalogId);
+
+    Task<Auction> PlaceBidAsync(Guid auctionId, BidRequest bid);
 }

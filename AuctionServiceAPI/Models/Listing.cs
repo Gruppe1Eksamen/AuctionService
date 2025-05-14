@@ -2,7 +2,7 @@
 using MongoDB.Bson.Serialization.Attributes;
 using System.Text.Json.Serialization;
 
-namespace DefaultNamespace;
+namespace AuctionService.Models;
 
 public enum ListingCategory
 {

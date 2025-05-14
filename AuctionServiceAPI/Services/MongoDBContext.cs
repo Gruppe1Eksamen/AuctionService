@@ -1,6 +1,12 @@
-﻿namespace DefaultNamespace;
+﻿using AuctionService.Models;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Driver;
 
-public class MongoDBContext
+namespace AuctionService.Services;
+
+public class MongoDBContext : IMongoDBContext
 {
     public IMongoDatabase Database { get; set; }
     public IMongoCollection<Auction> Collection { get; set; }
@@ -11,7 +17,7 @@ public class MongoDBContext
 
         var client = new MongoClient(config["MongoConnectionString"]);
         Database = client.GetDatabase(config["AuctionDB"]);
-        Collection = Database.GetCollection<Listing>(config["Auctions"]);
+        Collection = Database.GetCollection<Auction>(config["Auctions"]);
 
         logger.LogInformation($"Connected to database {config["AuctionDB"]}");
         logger.LogInformation($"Using collection {config["Auctions"]}");
