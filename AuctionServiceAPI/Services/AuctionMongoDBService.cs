@@ -55,7 +55,13 @@ namespace AuctionService.Services
         public async Task<Auction> PlaceBidAsync(Guid auctionId, BidRequest bid)
         {
             var filter = Builders<Auction>.Filter.And(
-                Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
+                //  finder auction
+Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
+
+                // tjekker at den er åben
+                Builders<Auction>.Filter.Eq(a => a.Status, AuctionStatus.Open),
+
+                // sikrer at nyt bud er højere
                 Builders<Auction>.Filter.Lt(a => a.Bid, bid.BidAmount)
             );
 
@@ -79,8 +85,81 @@ namespace AuctionService.Services
             var updatedAuction = await FindByIdAsync(auctionId);
             return updatedAuction!;
         }
+        
+        public async Task<Auction> CloseAuctionAsync(Guid auctionId)
+        {
+            // 1) Fetch the existing auction
+            var existing = await FindByIdAsync(auctionId)
+                           ?? throw new InvalidOperationException("Not found");
 
-        // NEW helper to wrap the extension method so tests can mock it
+            if (existing.Status != AuctionStatus.Open)
+                throw new InvalidOperationException("Not open or already closed");
+
+            // 2) Build your filter to ensure you only close an open auction
+            var filter = Builders<Auction>.Filter.And(
+                Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
+                Builders<Auction>.Filter.Eq(a => a.Status, AuctionStatus.Open)
+            );
+
+            // 3) Use the fetched values in your update
+            var update = Builders<Auction>.Update
+                .Set(a => a.Status, AuctionStatus.Closed)
+                .Set(a => a.WinnerUserId, existing.BidUserId)
+                .Set(a => a.WinningBid,   existing.Bid);
+
+            var result = await _context.Collection.UpdateOneAsync(filter, update);
+            if (result.ModifiedCount == 0)
+                throw new InvalidOperationException("Failed to close (maybe already closed)");
+
+            // 4) Return the now‐closed auction
+            return await FindByIdAsync(auctionId) 
+                   ?? throw new InvalidOperationException("Just closed but now missing?");
+        }
+
+        public async Task<Auction> OpenAuctionAsync(Guid auctionId)
+        {
+            // 1) Fetch and validate current state
+            var existing = await FindByIdAsync(auctionId)
+                           ?? throw new InvalidOperationException("Auction not found");
+            if (existing.Status != AuctionStatus.Pending)
+                throw new InvalidOperationException("Only pending auctions can be opened");
+
+            // 2) Build an atomic filter: matching Id + Pending status
+            var filter = Builders<Auction>.Filter.And(
+                Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
+                Builders<Auction>.Filter.Eq(a => a.Status, AuctionStatus.Pending)
+            );
+
+            // 3) Update only the status → Open
+            var update = Builders<Auction>.Update
+                .Set(a => a.Status, AuctionStatus.Open);
+
+            var result = await _context.Collection.UpdateOneAsync(filter, update);
+            if (result.ModifiedCount == 0)
+                throw new InvalidOperationException("Failed to open auction (maybe already open)");
+
+            // 4) Return fresh document
+            return await FindByIdAsync(auctionId)
+                   ?? throw new InvalidOperationException("Auction disappeared after opening");
+        }
+        
+        public async Task<AuctionWinnerDto> GetAuctionWinnerAsync(Guid auctionId)
+        {
+            var auction = await FindByIdAsync(auctionId)
+                          ?? throw new KeyNotFoundException($"Auction {auctionId} not found");
+
+            if (auction.Status != AuctionStatus.Closed)
+                throw new InvalidOperationException("Auction must be closed before querying the winner");
+
+            return new AuctionWinnerDto {
+                AuctionId     = auction.Id,
+                WinnerUserId  = auction.WinnerUserId,
+                WinningBid    = auction.WinningBid
+            };
+        }
+
+
+//hjælpemedtode
         protected virtual Task<Auction?> FindByIdAsync(Guid auctionId)
         {
             return _context
@@ -89,4 +168,6 @@ namespace AuctionService.Services
                 .FirstOrDefaultAsync();
         }
     }
+    
+    
 }

@@ -147,5 +147,7 @@ namespace AuctionServiceAPI.Tests
 
             await service.PlaceBidAsync(auctionId, req);
         }
+        
+        
     }
 }

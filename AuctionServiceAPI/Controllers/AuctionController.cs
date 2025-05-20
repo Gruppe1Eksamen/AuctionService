@@ -42,5 +42,28 @@ public class AuctionController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
+    
+    [HttpPost("{auctionId}/open")]
+    public async Task<IActionResult> Open(Guid auctionId)
+    {
+        var opened = await _auctionService.OpenAuctionAsync(auctionId);
+        return Ok(opened);
+    }
+
+    
+    [HttpPost("{auctionId}/close")]
+    public async Task<IActionResult> Close(Guid auctionId)
+    {
+        var closed = await _auctionService.CloseAuctionAsync(auctionId);
+        return Ok(closed);
+    }
+    
+    [HttpGet("{auctionId}/winner")]
+    public async Task<IActionResult> GetWinner(Guid auctionId)
+    {
+        var winner = await _auctionService.GetAuctionWinnerAsync(auctionId);
+        return Ok(winner);
+    }
+
 
 }

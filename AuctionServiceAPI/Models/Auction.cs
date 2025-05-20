@@ -15,7 +15,16 @@ public class Auction
     
     public float Bid { get; set; }
     public Guid BidUserId { get; set; }
+    
+    public DateTime? EndsAt { get; set; }
+    
+    public AuctionStatus Status { get; set; } = AuctionStatus.Pending;
 
     public List<Bid> BidHistory { get; set; }
     
+    public Guid? WinnerUserId { get; set; }
+    
+    public float? WinningBid { get; set; }
+    
 }
+public enum AuctionStatus { Pending, Open, Closed }
