@@ -21,7 +21,7 @@ builder.Services.AddSingleton<ICatalogClient, CatalogClient>();
 
 builder.Services.AddHttpClient<ICatalogClient, CatalogClient>(client =>
 {
-    client.BaseAddress = new Uri("http://catalog-service"); //til docker
+    client.BaseAddress = new Uri("http://listing-service"); //til docker
 });
 
 
