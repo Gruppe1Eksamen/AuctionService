@@ -28,5 +28,7 @@ public class Auction
 
     public bool PickedUp { get; set; }
     
+    public DateTime AuctionDate { get; set; }
+    
 }
 public enum AuctionStatus { Pending, Open, Closed }

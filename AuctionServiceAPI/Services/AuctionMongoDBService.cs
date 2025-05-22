@@ -10,46 +10,66 @@ namespace AuctionService.Services
 {
     public class AuctionMongoDBService : IAuctionMongoDBService
     {
-        private readonly ICatalogClient _catalogClient;
+        private readonly IListingClient _listingClient;
         private readonly IMongoDBContext _context;
         private readonly ILogger<AuctionMongoDBService> _logger;
 
         public AuctionMongoDBService(
-            ICatalogClient catalogClient,
+            IListingClient listingClient,
             IMongoDBContext context,
             ILogger<AuctionMongoDBService> logger)
         {
-            _catalogClient = catalogClient;
+            _listingClient = listingClient;
             _context = context;
             _logger = logger;
         }
 
-        public async Task<List<Auction>> CreateAuctionsFromCatalog(Guid catalogId)
+        public async Task<List<Auction>> CreateAuctionsFromListingsAsync()
         {
-            var catalog = await _catalogClient.GetCatalogAsync(catalogId);
-            if (catalog == null)
+            //henter listings
+            var listings = await _listingClient.GetAllListingsAsync();
+            if (listings == null || listings.Count == 0)
             {
-                _logger.LogWarning("Catalog {CatalogId} not found", catalogId);
-                throw new Exception("Catalog not found");
+                _logger.LogWarning("No listings returned from ListingClient");
+                return new List<Auction>();
             }
 
-            var auctions = catalog.Listings
-                .Select(listing => new Auction
+            var created = new List<Auction>();
+
+            foreach (var listing in listings)
+            {
+                //hvis de allerede er auctioner, blive de skippet
+                var exists = await _context
+                    .Collection
+                    .Find(a => a.ListingId == listing.Id)
+                    .AnyAsync();
+
+                if (exists)
                 {
-                    Id = Guid.NewGuid(),
-                    ListingId = listing.Id,
+                    _logger.LogDebug("Skipping listing {ListingId}, auction already exists.", listing.Id);
+                    continue;
+                }
+
+                //opretter nye pending auctions
+                var auction = new Auction
+                {
+                    Id              = Guid.NewGuid(),
+                    ListingId       = listing.Id,
                     ListingSnapshot = listing,
-                    Bid = 0,
-                    BidUserId = Guid.Empty
-                })
-                .ToList();
+                    Status          = AuctionStatus.Pending,
+                    Bid             = 0,
+                    BidUserId       = Guid.Empty,
+                    BidHistory      = new List<Bid>(),
+                    AuctionDate     = DateTime.UtcNow
+                };
 
-            await _context.Collection.InsertManyAsync(auctions);
-            _logger.LogInformation(
-                "Inserted {Count} auctions from catalog {CatalogId}",
-                auctions.Count, catalogId);
+                // indsætter dem i collection
+                await _context.Collection.InsertOneAsync(auction);
+                created.Add(auction);
+            }
 
-            return auctions;
+            _logger.LogInformation("Inserted {Count} new auctions from listings.", created.Count);
+            return created;
         }
 
         public async Task<Auction> PlaceBidAsync(Guid auctionId, BidRequest bid)
@@ -183,7 +203,17 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
 
             return updated;
         }
+        public async Task<List<Auction>> GetAuctionsByStatusAsync(AuctionStatus? status)
+        {
+            var filter = status.HasValue
+                ? Builders<Auction>.Filter.Eq(a => a.Status, status.Value)
+                : Builders<Auction>.Filter.Empty;
 
+            return await _context
+                .Collection
+                .Find(filter)
+                .ToListAsync();
+        }
 
 
 //hjælpemedtode

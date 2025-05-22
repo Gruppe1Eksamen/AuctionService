@@ -15,19 +15,39 @@ public class AuctionController : ControllerBase
         _auctionService = auctionService;
     }
 
-    [HttpPost("generate-from-catalog/{catalogId}")]
-    public async Task<IActionResult> GenerateFromCatalog(Guid catalogId)
+    [HttpPost("generate-from-listings")]
+    public async Task<IActionResult> GenerateFromListings()
     {
         try
         {
-            var auctions = await _auctionService.CreateAuctionsFromCatalog(catalogId);
-            return Ok(new { message = $"{auctions.Count} auctions created.", auctions });
+            var auctions = await _auctionService.CreateAuctionsFromListingsAsync();
+            return Ok(new
+            {
+                message = $"{auctions.Count} auctions created.",
+                auctions
+            });
         }
         catch (Exception ex)
         {
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAllAuctions([FromQuery] AuctionStatus? status)
+    {
+        try
+        {
+            // hvis status ikke er angivet, retunerer den alle
+            var auctions = await _auctionService.GetAuctionsByStatusAsync(status);
+            return Ok(auctions);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     
     [HttpPost("{auctionId}/bid")]
     public async Task<IActionResult> PlaceBid(Guid auctionId, [FromBody] BidRequest request)

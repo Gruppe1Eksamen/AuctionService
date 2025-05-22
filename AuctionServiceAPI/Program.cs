@@ -17,9 +17,9 @@ var collectionName = builder.Configuration["AuctionCollection"] ??
 builder.Services.AddSingleton<MongoDBContext>();
 
 builder.Services.AddSingleton<IAuctionMongoDBService, AuctionMongoDBService>();
-builder.Services.AddSingleton<ICatalogClient, CatalogClient>();
+builder.Services.AddSingleton<IListingClient, ListingClient>();
 
-builder.Services.AddHttpClient<ICatalogClient, CatalogClient>(client =>
+builder.Services.AddHttpClient<IListingClient, ListingClient>(client =>
 {
     client.BaseAddress = new Uri("http://listing-service"); //til docker
 });
