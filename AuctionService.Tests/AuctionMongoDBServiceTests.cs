@@ -32,7 +32,6 @@ namespace AuctionServiceAPI.Tests
 
             mockContext.Setup(c => c.Collection).Returns(mockCollection.Object);
 
-            // partial mock to override FindByIdAsync
             serviceMock = new Mock<AuctionMongoDBService>(
                 mockCatalogClient.Object,
                 mockContext.Object,
@@ -95,7 +94,6 @@ namespace AuctionServiceAPI.Tests
             var bidAmt = 42f;
             var req = new BidRequest { UserId = userId, BidAmount = bidAmt };
 
-            // 1) UpdateOne succeeds
             mockCollection
                 .Setup(c => c.UpdateOneAsync(
                     It.IsAny<FilterDefinition<Auction>>(),
@@ -105,7 +103,6 @@ namespace AuctionServiceAPI.Tests
                 .ReturnsAsync(new UpdateResult.Acknowledged(1, 1, null))
                 .Verifiable();
 
-            // 2) Stub FindByIdAsync to return a filled Auction
             var updatedAuction = new Auction {
                 Id = auctionId,
                 ListingId = Guid.NewGuid(),
@@ -136,7 +133,6 @@ namespace AuctionServiceAPI.Tests
             var auctionId = Guid.NewGuid();
             var req = new BidRequest { UserId = Guid.NewGuid(), BidAmount = 1f };
 
-            // UpdateOne reports 0 modified
             mockCollection
                 .Setup(c => c.UpdateOneAsync(
                     It.IsAny<FilterDefinition<Auction>>(),
@@ -147,7 +143,146 @@ namespace AuctionServiceAPI.Tests
 
             await service.PlaceBidAsync(auctionId, req);
         }
+        [TestMethod]
+        public async Task OpenAuctionAsync_ShouldOpen_WhenPending()
+        {
+            var auctionId = Guid.NewGuid();
+            var pending = new Auction { Id = auctionId, Status = AuctionStatus.Pending };
+            var opened = new Auction { Id = auctionId, Status = AuctionStatus.Open };
+
+            serviceMock
+                .Protected()
+                .SetupSequence<Task<Auction>>("FindByIdAsync", auctionId)
+                .ReturnsAsync(pending)
+                .ReturnsAsync(opened);
+
+            mockCollection
+                .Setup(c => c.UpdateOneAsync(
+                    It.IsAny<FilterDefinition<Auction>>(),
+                    It.IsAny<UpdateDefinition<Auction>>(),
+                    default(UpdateOptions),
+                    default(CancellationToken)))
+                .ReturnsAsync(new UpdateResult.Acknowledged(1, 1, null));
+
+            var result = await service.OpenAuctionAsync(auctionId);
+            Assert.AreEqual(AuctionStatus.Open, result.Status);
+        }
         
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async Task OpenAuctionAsync_ShouldThrow_WhenNotPending()
+        {
+            var auctionId = Guid.NewGuid();
+            var notPending = new Auction { Id = auctionId, Status = AuctionStatus.Open };
+            serviceMock
+                .Protected()
+                .Setup<Task<Auction>>("FindByIdAsync", auctionId)
+                .ReturnsAsync(notPending);
+
+            await service.OpenAuctionAsync(auctionId);
+        }
+        
+        [TestMethod]
+        public async Task CloseAuctionAsync_ShouldClose_WhenOpen()
+        {
+            var auctionId = Guid.NewGuid();
+            var open = new Auction { Id = auctionId, Status = AuctionStatus.Open, Bid = 10, BidUserId = Guid.NewGuid() };
+            var closed = new Auction { Id = auctionId, Status = AuctionStatus.Closed, Bid = 10, BidUserId = open.BidUserId, WinnerUserId = open.BidUserId, WinningBid = 10 };
+
+            serviceMock
+                .Protected()
+                .SetupSequence<Task<Auction>>("FindByIdAsync", auctionId)
+                .ReturnsAsync(open)
+                .ReturnsAsync(closed);
+
+            mockCollection
+                .Setup(c => c.UpdateOneAsync(
+                    It.IsAny<FilterDefinition<Auction>>(),
+                    It.IsAny<UpdateDefinition<Auction>>(),
+                    default(UpdateOptions),
+                    default(CancellationToken)))
+                .ReturnsAsync(new UpdateResult.Acknowledged(1, 1, null));
+
+            var result = await service.CloseAuctionAsync(auctionId);
+            Assert.AreEqual(AuctionStatus.Closed, result.Status);
+            Assert.AreEqual(open.BidUserId, result.WinnerUserId);
+        }
+        
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async Task CloseAuctionAsync_ShouldThrow_WhenNotOpen()
+        {
+            var auctionId = Guid.NewGuid();
+            var notOpen = new Auction { Id = auctionId, Status = AuctionStatus.Pending };
+            serviceMock
+                .Protected()
+                .Setup<Task<Auction>>("FindByIdAsync", auctionId)
+                .ReturnsAsync(notOpen);
+
+            await service.CloseAuctionAsync(auctionId);
+        }
+        
+        [TestMethod]
+        public async Task GetAuctionWinnerAsync_ShouldReturnWinner_WhenClosed()
+        {
+            var auctionId = Guid.NewGuid();
+            var closed = new Auction { Id = auctionId, Status = AuctionStatus.Closed, WinnerUserId = Guid.NewGuid(), WinningBid = 20 };
+            serviceMock
+                .Protected()
+                .Setup<Task<Auction>>("FindByIdAsync", auctionId)
+                .ReturnsAsync(closed);
+
+            var dto = await service.GetAuctionWinnerAsync(auctionId);
+            Assert.AreEqual(auctionId, dto.AuctionId);
+            Assert.AreEqual(closed.WinnerUserId, dto.WinnerUserId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async Task GetAuctionWinnerAsync_ShouldThrow_WhenNotClosed()
+        {
+            var auctionId = Guid.NewGuid();
+            var open = new Auction { Id = auctionId, Status = AuctionStatus.Open };
+            serviceMock
+                .Protected()
+                .Setup<Task<Auction>>("FindByIdAsync", auctionId)
+                .ReturnsAsync(open);
+
+            await service.GetAuctionWinnerAsync(auctionId);
+        }
+
+        [TestMethod]
+        public async Task UpdatePickUpAsync_ShouldSetPickedUp_WhenExists()
+        {
+            var auctionId = Guid.NewGuid();
+            var updatedAuction = new Auction { Id = auctionId, PickedUp = true };
+            mockCollection
+                .Setup(c => c.FindOneAndUpdateAsync(
+                    It.IsAny<FilterDefinition<Auction>>(),
+                    It.IsAny<UpdateDefinition<Auction>>(),
+                    It.IsAny<FindOneAndUpdateOptions<Auction>>(),
+                    default(CancellationToken)))
+                .ReturnsAsync(updatedAuction);
+
+            var result = await service.UpdatePickUpAsync(auctionId);
+            Assert.IsTrue(result.PickedUp);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async Task UpdatePickUpAsync_ShouldThrow_WhenNotFound()
+        {
+            var auctionId = Guid.NewGuid();
+            mockCollection
+                .Setup(c => c.FindOneAndUpdateAsync(
+                    It.IsAny<FilterDefinition<Auction>>(),
+                    It.IsAny<UpdateDefinition<Auction>>(),
+                    It.IsAny<FindOneAndUpdateOptions<Auction>>(),
+                    default(CancellationToken)))
+                .ReturnsAsync((Auction)null);
+
+            await service.UpdatePickUpAsync(auctionId);
+        }
         
     }
 }
