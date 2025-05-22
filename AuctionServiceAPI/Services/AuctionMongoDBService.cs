@@ -108,20 +108,20 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
         
         public async Task<Auction> CloseAuctionAsync(Guid auctionId)
         {
-            // 1) Fetch the existing auction
+            // finder auktionen
             var existing = await FindByIdAsync(auctionId)
                            ?? throw new InvalidOperationException("Not found");
 
             if (existing.Status != AuctionStatus.Open)
                 throw new InvalidOperationException("Not open or already closed");
 
-            // 2) Build your filter to ensure you only close an open auction
+            // sikrer os at auktionen er åben, for at vi kan lukke den
             var filter = Builders<Auction>.Filter.And(
                 Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
                 Builders<Auction>.Filter.Eq(a => a.Status, AuctionStatus.Open)
             );
 
-            // 3) Use the fetched values in your update
+            // tildeler værdier for winning user/bid
             var update = Builders<Auction>.Update
                 .Set(a => a.Status, AuctionStatus.Closed)
                 .Set(a => a.WinnerUserId, existing.BidUserId)
@@ -131,26 +131,26 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
             if (result.ModifiedCount == 0)
                 throw new InvalidOperationException("Failed to close (maybe already closed)");
 
-            // 4) Return the now‐closed auction
+            // returnerer den nu lukkede auktion
             return await FindByIdAsync(auctionId) 
                    ?? throw new InvalidOperationException("Just closed but now missing?");
         }
 
         public async Task<Auction> OpenAuctionAsync(Guid auctionId)
         {
-            // 1) Fetch and validate current state
+            // validerer den nuværende state
             var existing = await FindByIdAsync(auctionId)
                            ?? throw new InvalidOperationException("Auction not found");
             if (existing.Status != AuctionStatus.Pending)
                 throw new InvalidOperationException("Only pending auctions can be opened");
 
-            // 2) Build an atomic filter: matching Id + Pending status
+            // finder auktionen og tjekker at den er pending
             var filter = Builders<Auction>.Filter.And(
                 Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
                 Builders<Auction>.Filter.Eq(a => a.Status, AuctionStatus.Pending)
             );
 
-            // 3) Update only the status → Open
+            // opdaterer state til open
             var update = Builders<Auction>.Update
                 .Set(a => a.Status, AuctionStatus.Open);
 
@@ -158,7 +158,7 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
             if (result.ModifiedCount == 0)
                 throw new InvalidOperationException("Failed to open auction (maybe already open)");
 
-            // 4) Return fresh document
+            // retunerer auktionen
             return await FindByIdAsync(auctionId)
                    ?? throw new InvalidOperationException("Auction disappeared after opening");
         }
@@ -180,24 +180,23 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
 
         public async Task<Auction> UpdatePickUpAsync(Guid auctionId)
         {
-            // 1) Build a filter matching the auction by its Id
+            // finder auktionen
             var filter = Builders<Auction>.Filter.Eq(a => a.Id, auctionId);
 
-            // 2) Define the update to set PickedUp = true
+            // definerer opdateringen for værdien for pickedup
             var update = Builders<Auction>.Update.Set(a => a.PickedUp, true);
 
-            // 3) Ask Mongo to return the document _after_ the update
             var options = new FindOneAndUpdateOptions<Auction>
             {
                 ReturnDocument = ReturnDocument.After
             };
 
-            // 4) Perform the atomic find-and-update on the correct collection
+            // opdaterer væriden
             var updated = await _context
                 .Collection
                 .FindOneAndUpdateAsync(filter, update, options);
 
-            // 5) If nothing was matched/updated, no auction with that Id existed
+            // hvis der ikke blev opdateret noget, blev auktionen ikke fundet
             if (updated == null)
                 throw new InvalidOperationException($"Auction {auctionId} not found");
 
