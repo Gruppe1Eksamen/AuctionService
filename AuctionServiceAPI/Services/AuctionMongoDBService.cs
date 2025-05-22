@@ -158,6 +158,33 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
             };
         }
 
+        public async Task<Auction> UpdatePickUpAsync(Guid auctionId)
+        {
+            // 1) Build a filter matching the auction by its Id
+            var filter = Builders<Auction>.Filter.Eq(a => a.Id, auctionId);
+
+            // 2) Define the update to set PickedUp = true
+            var update = Builders<Auction>.Update.Set(a => a.PickedUp, true);
+
+            // 3) Ask Mongo to return the document _after_ the update
+            var options = new FindOneAndUpdateOptions<Auction>
+            {
+                ReturnDocument = ReturnDocument.After
+            };
+
+            // 4) Perform the atomic find-and-update on the correct collection
+            var updated = await _context
+                .Collection
+                .FindOneAndUpdateAsync(filter, update, options);
+
+            // 5) If nothing was matched/updated, no auction with that Id existed
+            if (updated == null)
+                throw new InvalidOperationException($"Auction {auctionId} not found");
+
+            return updated;
+        }
+
+
 
 //hjælpemedtode
         protected virtual Task<Auction?> FindByIdAsync(Guid auctionId)

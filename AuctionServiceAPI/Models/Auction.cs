@@ -25,6 +25,8 @@ public class Auction
     public Guid? WinnerUserId { get; set; }
     
     public float? WinningBid { get; set; }
+
+    public bool PickedUp { get; set; }
     
 }
 public enum AuctionStatus { Pending, Open, Closed }

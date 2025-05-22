@@ -14,5 +14,7 @@ public interface IAuctionMongoDBService
     
     Task<AuctionWinnerDto> GetAuctionWinnerAsync(Guid auctionId);
 
+    Task<Auction> UpdatePickUpAsync(Guid auctionId);
+
 
 }
