@@ -26,5 +26,7 @@ public class Listing
     [JsonConverter(typeof(JsonStringEnumConverter))]
 
     public ListingCategory ListingCategory { get; set; }
+    public string Location { get; set; }
+    public Guid SellerId { get; set; }
     public List<Uri> Image { get; set; } = new List<Uri>();
 }
