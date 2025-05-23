@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AuctionServiceAPI.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("[controller]")]
 public class AuctionController : ControllerBase
 {
     private readonly IAuctionMongoDBService _auctionService;
@@ -50,7 +50,7 @@ public class AuctionController : ControllerBase
 
     
     [HttpPost("{auctionId}/bid")]
-    public async Task<IActionResult> PlaceBid(Guid auctionId, [FromBody] BidRequest request)
+    public async Task<IActionResult> PlaceBid(string auctionId, [FromBody] BidRequest request)
     {
         try
         {
@@ -64,7 +64,7 @@ public class AuctionController : ControllerBase
     }
     
     [HttpPost("{auctionId}/open")]
-    public async Task<IActionResult> Open(Guid auctionId)
+    public async Task<IActionResult> Open(string auctionId)
     {
         try
         {
@@ -82,7 +82,7 @@ public class AuctionController : ControllerBase
     }
 
     [HttpPost("{auctionId}/close")]
-    public async Task<IActionResult> Close(Guid auctionId)
+    public async Task<IActionResult> Close(string auctionId)
     {
         try
         {
@@ -100,7 +100,7 @@ public class AuctionController : ControllerBase
     }
 
     [HttpGet("{auctionId}/winner")]
-    public async Task<IActionResult> GetWinner(Guid auctionId)
+    public async Task<IActionResult> GetWinner(string auctionId)
     {
         try
         {
@@ -121,7 +121,7 @@ public class AuctionController : ControllerBase
         }
     }
     [HttpPut("{auctionId}/pickup")]
-    public async Task<IActionResult> PickUp(Guid auctionId)
+    public async Task<IActionResult> PickUp(string auctionId)
     {
         try
         {
@@ -140,6 +140,26 @@ public class AuctionController : ControllerBase
         }
     }
     
-
-
+    [HttpGet("ping")]
+    public ActionResult<bool> Ping()
+    {
+        return Ok(true);
+    }
+    
+    
+    //Listings
+    [HttpGet("listings")]
+    public async Task<IActionResult> GetAllListings()
+    {
+        try
+        {
+            // hvis status ikke er angivet, retunerer den alle
+            var listings = await _auctionService.ReturnAllListings();
+            return Ok(listings);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }

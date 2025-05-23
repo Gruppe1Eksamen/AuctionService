@@ -1,29 +1,41 @@
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Text.Json;
+using System.Threading.Tasks;
 using AuctionService.Models;
 
-namespace AuctionService.Services;
-
-public class ListingClient : IListingClient
+namespace AuctionService.Services
 {
-    private readonly HttpClient _httpClient;
-    private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
-
-    public ListingClient(HttpClient httpClient)
+    public class ListingClient : IListingClient
     {
-        _httpClient = httpClient;
-    }
+        private readonly HttpClient _httpClient;
+        private readonly JsonSerializerOptions _jsonOptions 
+            = new() { PropertyNameCaseInsensitive = true };
 
-    public async Task<List<Listing>> GetAllListingsAsync()
-    {
-        var response = await _httpClient.GetAsync("/api/listings/");
-        if (!response.IsSuccessStatusCode)
-            return new List<Listing>();
+        public ListingClient(HttpClient httpClient)
+        {
+            _httpClient = httpClient 
+                          ?? throw new ArgumentNullException(nameof(httpClient));
+        }
 
-        var content = await response.Content.ReadAsStringAsync();
-        return JsonSerializer
-                   .Deserialize<List<Listing>>(content, _jsonOptions)
-               ?? new List<Listing>();
+        public async Task<List<Listing>> GetAllListingsAsync()
+        {
+            // Vi bruger den BaseAddress, som du har sat i Program.cs via AddHttpClient
+            var response = await _httpClient.GetAsync("/api/listings/");
+            if (!response.IsSuccessStatusCode)
+            {
+                // Log evt. her, hvis du har en ILogger til rådighed
+                return new List<Listing>();
+            }
+
+            // Deserialiser direkte fra stream for bedre performance
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            var listings = await JsonSerializer
+                               .DeserializeAsync<List<Listing>>(stream, _jsonOptions)
+                           ?? new List<Listing>();
+
+            return listings;
+        }
     }
 }
-//man fetcher alle listings
-//hvis en listing allerede eksisterer inde i en auktion, skal den ikke oprettes

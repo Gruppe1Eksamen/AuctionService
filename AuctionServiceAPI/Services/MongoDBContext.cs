@@ -13,13 +13,13 @@ public class MongoDBContext : IMongoDBContext
     
     public MongoDBContext(ILogger<AuctionMongoDBService> logger, IConfiguration config)
     {        
-        BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String));
-
+        // BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String));
+        
         var client = new MongoClient(config["MongoConnectionString"]);
-        Database = client.GetDatabase(config["AuctionDB"]);
-        Collection = Database.GetCollection<Auction>(config["Auctions"]);
+        Database = client.GetDatabase(config["AuctionDatabase"]);
+        Collection = Database.GetCollection<Auction>(config["AuctionCollection"]);
 
-        logger.LogInformation($"Connected to database {config["AuctionDB"]}");
-        logger.LogInformation($"Using collection {config["Auctions"]}");
+        logger.LogInformation($"Connected to database {config["AuctionDatabase"]}");
+        logger.LogInformation($"Using collection {config["AuctionCollection"]}");
     }
 }

@@ -19,7 +19,7 @@ public class Listing
 {
     [BsonId]
     [BsonRepresentation(BsonType.String)]
-    public Guid Id { get; set; }
+    public string Id { get; set; }
     public string Name { get; set; }
     public float AssesedPrice { get; set; }
     public string Description { get; set; }
@@ -27,6 +27,6 @@ public class Listing
 
     public ListingCategory ListingCategory { get; set; }
     public string Location { get; set; }
-    public Guid SellerId { get; set; }
+    public string SellerId { get; set; }
     public List<Uri> Image { get; set; } = new List<Uri>();
 }

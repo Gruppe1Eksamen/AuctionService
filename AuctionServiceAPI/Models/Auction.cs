@@ -8,13 +8,13 @@ public class Auction
 {
     [BsonId]
     [BsonRepresentation(BsonType.String)]
-    public Guid Id { get; set; }
+    public string Id { get; set; }
     
-    public Guid ListingId { get; set; }
+    public string ListingId { get; set; }
     public Listing ListingSnapshot { get; set; }
     
     public float Bid { get; set; }
-    public Guid BidUserId { get; set; }
+    public string BidUserId { get; set; }
     
     public DateTime? EndsAt { get; set; }
     
@@ -22,7 +22,7 @@ public class Auction
 
     public List<Bid> BidHistory { get; set; }
     
-    public Guid? WinnerUserId { get; set; }
+    public string? WinnerUserId { get; set; }
     
     public float? WinningBid { get; set; }
 

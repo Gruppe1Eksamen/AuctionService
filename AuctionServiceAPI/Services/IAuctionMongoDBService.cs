@@ -5,17 +5,20 @@ namespace AuctionService.Services;
 public interface IAuctionMongoDBService
 {
     Task<List<Auction>> CreateAuctionsFromListingsAsync();
-    Task<Auction> PlaceBidAsync(Guid auctionId, BidRequest bid);
+    Task<Auction> PlaceBidAsync(string auctionId, BidRequest bid);
     
-    Task<Auction> CloseAuctionAsync(Guid auctionId);
+    Task<Auction> CloseAuctionAsync(string auctionId);
 
-    Task<Auction> OpenAuctionAsync(Guid auctionId);
+    Task<Auction> OpenAuctionAsync(string auctionId);
     
-    Task<AuctionWinnerDto> GetAuctionWinnerAsync(Guid auctionId);
+    Task<AuctionWinnerDto> GetAuctionWinnerAsync(string auctionId);
 
-    Task<Auction> UpdatePickUpAsync(Guid auctionId);
+    Task<Auction> UpdatePickUpAsync(string auctionId);
     
     Task<List<Auction>> GetAuctionsByStatusAsync(AuctionStatus? status);
+
+    //test
+    Task<List<Listing>> ReturnAllListings();
 
 
 

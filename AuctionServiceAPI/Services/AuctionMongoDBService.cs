@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AuctionService.Models;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace AuctionService.Services
@@ -53,12 +54,12 @@ namespace AuctionService.Services
                 //opretter nye pending auctions
                 var auction = new Auction
                 {
-                    Id              = Guid.NewGuid(),
+                    Id = ObjectId.GenerateNewId().ToString(),
                     ListingId       = listing.Id,
                     ListingSnapshot = listing,
                     Status          = AuctionStatus.Pending,
                     Bid             = 0,
-                    BidUserId       = Guid.Empty,
+                    BidUserId       = null,
                     BidHistory      = new List<Bid>(),
                     AuctionDate     = DateTime.UtcNow
                 };
@@ -72,7 +73,7 @@ namespace AuctionService.Services
             return created;
         }
 
-        public async Task<Auction> PlaceBidAsync(Guid auctionId, BidRequest bid)
+        public async Task<Auction> PlaceBidAsync(string auctionId, BidRequest bid)
         {
             var filter = Builders<Auction>.Filter.And(
                 //  finder auction
@@ -106,7 +107,7 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
             return updatedAuction!;
         }
         
-        public async Task<Auction> CloseAuctionAsync(Guid auctionId)
+        public async Task<Auction> CloseAuctionAsync(string auctionId)
         {
             // finder auktionen
             var existing = await FindByIdAsync(auctionId)
@@ -136,7 +137,7 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
                    ?? throw new InvalidOperationException("Just closed but now missing?");
         }
 
-        public async Task<Auction> OpenAuctionAsync(Guid auctionId)
+        public async Task<Auction> OpenAuctionAsync(string auctionId)
         {
             // validerer den nuværende state
             var existing = await FindByIdAsync(auctionId)
@@ -163,7 +164,7 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
                    ?? throw new InvalidOperationException("Auction disappeared after opening");
         }
         
-        public async Task<AuctionWinnerDto> GetAuctionWinnerAsync(Guid auctionId)
+        public async Task<AuctionWinnerDto> GetAuctionWinnerAsync(string auctionId)
         {
             var auction = await FindByIdAsync(auctionId)
                           ?? throw new KeyNotFoundException($"Auction {auctionId} not found");
@@ -178,7 +179,7 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
             };
         }
 
-        public async Task<Auction> UpdatePickUpAsync(Guid auctionId)
+        public async Task<Auction> UpdatePickUpAsync(string auctionId)
         {
             // finder auktionen
             var filter = Builders<Auction>.Filter.Eq(a => a.Id, auctionId);
@@ -216,14 +217,29 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
 
 
 //hjælpemedtode
-        protected virtual Task<Auction?> FindByIdAsync(Guid auctionId)
+        protected virtual Task<Auction?> FindByIdAsync(string auctionId)
         {
             return _context
                 .Collection
                 .Find(a => a.Id == auctionId)
                 .FirstOrDefaultAsync();
         }
+        
+        public async Task<List<Listing>> ReturnAllListings()
+        {
+            //henter listings
+            var listings = await _listingClient.GetAllListingsAsync();
+            if (listings == null || listings.Count == 0)
+            {
+                _logger.LogWarning("No listings returned from ListingClient");
+                return new List<Listing>();
+            }
+
+            return listings;
+        }
     }
+    
+    
     
     
 }
