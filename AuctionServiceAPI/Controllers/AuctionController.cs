@@ -9,10 +9,21 @@ namespace AuctionServiceAPI.Controllers;
 public class AuctionController : ControllerBase
 {
     private readonly IAuctionMongoDBService _auctionService;
+    //tilføjet for listing
+    private readonly IConfiguration _config;
+    private readonly ILogger<AuctionController> _logger;
+    private readonly HttpClient _httpClient;
+    private readonly string _listingServiceBase;
 
-    public AuctionController(IAuctionMongoDBService auctionService)
+    public AuctionController(ILogger<AuctionController> logger, IConfiguration config, HttpClient httpClient, IAuctionMongoDBService auctionService)
     {
         _auctionService = auctionService;
+        
+        //tilføjet for listing
+        _config = config;
+        _logger = logger;
+        _httpClient = httpClient;
+        _listingServiceBase = _config["LISTINGSERVICE_ENDPOINT"] ?? "http://localhost:5077";
     }
 
     [HttpPost("generate-from-listings")]
@@ -161,5 +172,21 @@ public class AuctionController : ControllerBase
         {
             return BadRequest(new { error = ex.Message });
         }
+    }
+    
+    [HttpGet("external-listings")]
+    public async Task<IActionResult> GetExternalListings()
+    {
+        var validateUrl = $"{_listingServiceBase}/api/listing";
+
+        _logger.LogInformation("Kalder ListingService på {Url}", validateUrl);
+        var response = await _httpClient.GetAsync(validateUrl);
+        if (response.IsSuccessStatusCode)
+        {
+            var listings = await response.Content.ReadFromJsonAsync<List<Listing>>();
+            return Ok(listings);
+        }
+
+        return BadRequest(new { error = "Failed to fetch listings from external service." });
     }
 }
