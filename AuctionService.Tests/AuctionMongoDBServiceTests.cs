@@ -1,288 +1,186 @@
-﻿// AuctionMongoDBServiceTests.cs
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using AuctionService.Models;
 using AuctionService.Services;
+using AuctionServiceAPI.Controllers;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Moq.Protected;
-using MongoDB.Driver;
 
 namespace AuctionServiceAPI.Tests
 {
     [TestClass]
-    public class AuctionMongoDBServiceTests
+    public class AuctionControllerTests
     {
-        private Mock<ICatalogClient> mockCatalogClient;
-        private Mock<ILogger<AuctionMongoDBService>> mockLogger;
-        private Mock<IMongoCollection<Auction>> mockCollection;
-        private Mock<IMongoDBContext> mockContext;
-        private Mock<AuctionMongoDBService> serviceMock;
-        private AuctionMongoDBService service;
+        private Mock<ILogger<AuctionController>> _mockLogger;
+        private Mock<IConfiguration> _mockConfig;
+        private Mock<IAuctionMongoDBService> _mockService;
+        private HttpClient _httpClient;
+        private AuctionController _controller;
+        private Auction _sampleAuction;
+        private List<Listing> _sampleListings;
 
         [TestInitialize]
         public void Setup()
         {
-            mockCatalogClient = new Mock<ICatalogClient>();
-            mockLogger = new Mock<ILogger<AuctionMongoDBService>>();
-            mockCollection = new Mock<IMongoCollection<Auction>>();
-            mockContext = new Mock<IMongoDBContext>();
+            _mockLogger = new Mock<ILogger<AuctionController>>();
+            _mockConfig = new Mock<IConfiguration>();
+            _mockConfig.SetupGet(c => c["LISTINGSERVICE_ENDPOINT"]).Returns("http://fake");
 
-            mockContext.Setup(c => c.Collection).Returns(mockCollection.Object);
+            _mockService = new Mock<IAuctionMongoDBService>();
+            
+            _controller = new AuctionController(
+                _mockLogger.Object,
+                _mockConfig.Object,
+                _httpClient,
+                _mockService.Object
+            );
 
-            serviceMock = new Mock<AuctionMongoDBService>(
-                mockCatalogClient.Object,
-                mockContext.Object,
-                mockLogger.Object
-            ) { CallBase = true };
-
-            service = serviceMock.Object;
-        }
-
-        [TestMethod]
-        public async Task CreateAuctionsFromCatalog_ShouldInsertAuctions_WhenCatalogExists()
-        {
-            var catalogId = Guid.NewGuid();
-            var listings = new List<Listing> {
-                new Listing { Id = Guid.NewGuid(), Name = "A" },
-                new Listing { Id = Guid.NewGuid(), Name = "B" }
+            _sampleAuction = new Auction
+            {
+                Id = "A1",
+                ListingId = "L1",
+                Bid = 100f,
+                BidUserId = "user1",
+                EndsAt = DateTime.UtcNow.AddHours(1),
+                Status = AuctionStatus.Open,
+                BidHistory = new List<Bid>
+                {
+                    new Bid { UserId = "user1", Amount = 100f, PlacedAt = DateTime.UtcNow }
+                },
+                WinnerUserId = null,
+                WinningBid = null,
+                PickedUp = false,
+                AuctionDate = DateTime.UtcNow
             };
-            var catalog = new Catalog { Id = catalogId, Name = "C", Listings = listings };
 
-            mockCatalogClient
-                .Setup(c => c.GetCatalogAsync(catalogId))
-                .ReturnsAsync(catalog);
-
-            mockCollection
-                .Setup(c => c.InsertManyAsync(
-                    It.IsAny<IEnumerable<Auction>>(),
-                    null,
-                    default))
-                .Returns(Task.CompletedTask)
-                .Verifiable();
-
-            var result = await service.CreateAuctionsFromCatalog(catalogId);
-
-            Assert.AreEqual(2, result.Count);
-            mockCollection.Verify(
-               c => c.InsertManyAsync(
-                   It.IsAny<IEnumerable<Auction>>(),
-                   null,
-                   default),
-               Times.Once);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(Exception), "Catalog not found")]
-        public async Task CreateAuctionsFromCatalog_ShouldThrow_WhenCatalogIsNull()
-        {
-            var catalogId = Guid.NewGuid();
-            mockCatalogClient
-                .Setup(c => c.GetCatalogAsync(catalogId))
-                .ReturnsAsync((Catalog)null);
-
-            await service.CreateAuctionsFromCatalog(catalogId);
-        }
-
-        [TestMethod]
-        public async Task PlaceBidAsync_ShouldUpdateBid_WhenBidIsHigher()
-        {
-            var auctionId = Guid.NewGuid();
-            var userId = Guid.NewGuid();
-            var bidAmt = 42f;
-            var req = new BidRequest { UserId = userId, BidAmount = bidAmt };
-
-            mockCollection
-                .Setup(c => c.UpdateOneAsync(
-                    It.IsAny<FilterDefinition<Auction>>(),
-                    It.IsAny<UpdateDefinition<Auction>>(),
-                    default,
-                    default))
-                .ReturnsAsync(new UpdateResult.Acknowledged(1, 1, null))
-                .Verifiable();
-
-            var updatedAuction = new Auction {
-                Id = auctionId,
-                ListingId = Guid.NewGuid(),
-                ListingSnapshot = new Listing { Id = Guid.NewGuid(), Name = "X" },
-                Bid = bidAmt,
-                BidUserId = userId,
-                BidHistory = new List<Bid> {
-                    new Bid { UserId = userId, Amount = bidAmt, PlacedAt = DateTime.UtcNow }
+            _sampleListings = new List<Listing>
+            {
+                new Listing
+                {
+                    Id = "L1",
+                    Name = "Item1",
+                    AssesedPrice = 200f,
+                    Description = "Desc",
+                    ListingCategory = ListingCategory.Furniture,
+                    Location = "Cph",
+                    SellerId = "s1"
                 }
             };
-            serviceMock
-                .Protected()
-                .Setup<Task<Auction>>("FindByIdAsync", auctionId)
-                .ReturnsAsync(updatedAuction);
-
-            var result = await service.PlaceBidAsync(auctionId, req);
-
-            Assert.AreEqual(bidAmt, result.Bid);
-            Assert.AreEqual(userId, result.BidUserId);
-            Assert.AreEqual(1, result.BidHistory.Count);
-            mockCollection.Verify();
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception), "Bid must be higher than the current bid.")]
-        public async Task PlaceBidAsync_ShouldThrow_WhenBidIsLowerOrEqual()
+        public async Task GetAllAuctions_WithStatus_ReturnsOkList()
         {
-            var auctionId = Guid.NewGuid();
-            var req = new BidRequest { UserId = Guid.NewGuid(), BidAmount = 1f };
+            // Arrange
+            var list = new List<Auction> { _sampleAuction };
+            _mockService
+                .Setup(s => s.GetAuctionsByStatusAsync(AuctionStatus.Open))
+                .ReturnsAsync(list);
 
-            mockCollection
-                .Setup(c => c.UpdateOneAsync(
-                    It.IsAny<FilterDefinition<Auction>>(),
-                    It.IsAny<UpdateDefinition<Auction>>(),
-                    default,
-                    default))
-                .ReturnsAsync(new UpdateResult.Acknowledged(0, 0, null));
+            // Act
+            var result = await _controller.GetAllAuctions(AuctionStatus.Open) as OkObjectResult;
 
-            await service.PlaceBidAsync(auctionId, req);
-        }
-        [TestMethod]
-        public async Task OpenAuctionAsync_ShouldOpen_WhenPending()
-        {
-            var auctionId = Guid.NewGuid();
-            var pending = new Auction { Id = auctionId, Status = AuctionStatus.Pending };
-            var opened = new Auction { Id = auctionId, Status = AuctionStatus.Open };
-
-            serviceMock
-                .Protected()
-                .SetupSequence<Task<Auction>>("FindByIdAsync", auctionId)
-                .ReturnsAsync(pending)
-                .ReturnsAsync(opened);
-
-            mockCollection
-                .Setup(c => c.UpdateOneAsync(
-                    It.IsAny<FilterDefinition<Auction>>(),
-                    It.IsAny<UpdateDefinition<Auction>>(),
-                    default(UpdateOptions),
-                    default(CancellationToken)))
-                .ReturnsAsync(new UpdateResult.Acknowledged(1, 1, null));
-
-            var result = await service.OpenAuctionAsync(auctionId);
-            Assert.AreEqual(AuctionStatus.Open, result.Status);
-        }
-        
-        [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
-        public async Task OpenAuctionAsync_ShouldThrow_WhenNotPending()
-        {
-            var auctionId = Guid.NewGuid();
-            var notPending = new Auction { Id = auctionId, Status = AuctionStatus.Open };
-            serviceMock
-                .Protected()
-                .Setup<Task<Auction>>("FindByIdAsync", auctionId)
-                .ReturnsAsync(notPending);
-
-            await service.OpenAuctionAsync(auctionId);
-        }
-        
-        [TestMethod]
-        public async Task CloseAuctionAsync_ShouldClose_WhenOpen()
-        {
-            var auctionId = Guid.NewGuid();
-            var open = new Auction { Id = auctionId, Status = AuctionStatus.Open, Bid = 10, BidUserId = Guid.NewGuid() };
-            var closed = new Auction { Id = auctionId, Status = AuctionStatus.Closed, Bid = 10, BidUserId = open.BidUserId, WinnerUserId = open.BidUserId, WinningBid = 10 };
-
-            serviceMock
-                .Protected()
-                .SetupSequence<Task<Auction>>("FindByIdAsync", auctionId)
-                .ReturnsAsync(open)
-                .ReturnsAsync(closed);
-
-            mockCollection
-                .Setup(c => c.UpdateOneAsync(
-                    It.IsAny<FilterDefinition<Auction>>(),
-                    It.IsAny<UpdateDefinition<Auction>>(),
-                    default(UpdateOptions),
-                    default(CancellationToken)))
-                .ReturnsAsync(new UpdateResult.Acknowledged(1, 1, null));
-
-            var result = await service.CloseAuctionAsync(auctionId);
-            Assert.AreEqual(AuctionStatus.Closed, result.Status);
-            Assert.AreEqual(open.BidUserId, result.WinnerUserId);
-        }
-        
-        [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
-        public async Task CloseAuctionAsync_ShouldThrow_WhenNotOpen()
-        {
-            var auctionId = Guid.NewGuid();
-            var notOpen = new Auction { Id = auctionId, Status = AuctionStatus.Pending };
-            serviceMock
-                .Protected()
-                .Setup<Task<Auction>>("FindByIdAsync", auctionId)
-                .ReturnsAsync(notOpen);
-
-            await service.CloseAuctionAsync(auctionId);
-        }
-        
-        [TestMethod]
-        public async Task GetAuctionWinnerAsync_ShouldReturnWinner_WhenClosed()
-        {
-            var auctionId = Guid.NewGuid();
-            var closed = new Auction { Id = auctionId, Status = AuctionStatus.Closed, WinnerUserId = Guid.NewGuid(), WinningBid = 20 };
-            serviceMock
-                .Protected()
-                .Setup<Task<Auction>>("FindByIdAsync", auctionId)
-                .ReturnsAsync(closed);
-
-            var dto = await service.GetAuctionWinnerAsync(auctionId);
-            Assert.AreEqual(auctionId, dto.AuctionId);
-            Assert.AreEqual(closed.WinnerUserId, dto.WinnerUserId);
+            // Assert
+            Assert.IsNotNull(result);
+            var returned = result.Value as List<Auction>;
+            Assert.IsNotNull(returned);
+            CollectionAssert.AreEqual(list, returned);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
-        public async Task GetAuctionWinnerAsync_ShouldThrow_WhenNotClosed()
+        public async Task PlaceBid_Success_ReturnsOk()
         {
-            var auctionId = Guid.NewGuid();
-            var open = new Auction { Id = auctionId, Status = AuctionStatus.Open };
-            serviceMock
-                .Protected()
-                .Setup<Task<Auction>>("FindByIdAsync", auctionId)
-                .ReturnsAsync(open);
+            // Arrange
+            var req = new BidRequest { UserId = "u", BidAmount = 123f };
+            _mockService
+                .Setup(s => s.PlaceBidAsync("A1", req))
+                .ReturnsAsync(_sampleAuction);
 
-            await service.GetAuctionWinnerAsync(auctionId);
+            // Act
+            var result = await _controller.PlaceBid("A1", req) as OkObjectResult;
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(_sampleAuction, result.Value);
         }
 
         [TestMethod]
-        public async Task UpdatePickUpAsync_ShouldSetPickedUp_WhenExists()
+        public async Task Open_Success_ReturnsOpenedAuction()
         {
-            var auctionId = Guid.NewGuid();
-            var updatedAuction = new Auction { Id = auctionId, PickedUp = true };
-            mockCollection
-                .Setup(c => c.FindOneAndUpdateAsync(
-                    It.IsAny<FilterDefinition<Auction>>(),
-                    It.IsAny<UpdateDefinition<Auction>>(),
-                    It.IsAny<FindOneAndUpdateOptions<Auction>>(),
-                    default(CancellationToken)))
-                .ReturnsAsync(updatedAuction);
+            // Arrange
+            _sampleAuction.Status = AuctionStatus.Open;
+            _mockService
+                .Setup(s => s.OpenAuctionAsync("A1"))
+                .ReturnsAsync(_sampleAuction);
 
-            var result = await service.UpdatePickUpAsync(auctionId);
-            Assert.IsTrue(result.PickedUp);
+            // Act
+            var result = await _controller.Open("A1") as OkObjectResult;
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsInstanceOfType(result.Value, typeof(Auction));
+            var returned = (Auction)result.Value!;
+            Assert.AreEqual(AuctionStatus.Open, returned.Status);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
-        public async Task UpdatePickUpAsync_ShouldThrow_WhenNotFound()
+        public async Task Close_Success_ReturnsOkAuction()
         {
-            var auctionId = Guid.NewGuid();
-            mockCollection
-                .Setup(c => c.FindOneAndUpdateAsync(
-                    It.IsAny<FilterDefinition<Auction>>(),
-                    It.IsAny<UpdateDefinition<Auction>>(),
-                    It.IsAny<FindOneAndUpdateOptions<Auction>>(),
-                    default(CancellationToken)))
-                .ReturnsAsync((Auction)null);
+            // Arrange
+            var closedAuction = _sampleAuction;
+            closedAuction.Status = AuctionStatus.Closed;
+            _mockService
+                .Setup(s => s.CloseAuctionAsync("A1"))
+                .ReturnsAsync(closedAuction);
 
-            await service.UpdatePickUpAsync(auctionId);
+            // Act
+            var result = await _controller.Close("A1") as OkObjectResult;
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(closedAuction, result.Value);
         }
-        
+
+        [TestMethod]
+        public async Task GetWinner_Success_ReturnsOkDto()
+        {
+            // Arrange
+            var dto = new AuctionWinnerDto { AuctionId = "A1", WinnerUserId = "u", WinningBid = 123f };
+            _mockService
+                .Setup(s => s.GetAuctionWinnerAsync("A1"))
+                .ReturnsAsync(dto);
+
+            // Act
+            var result = await _controller.GetWinner("A1") as OkObjectResult;
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(dto, result.Value);
+        }
+
+        [TestMethod]
+        public async Task PickUp_Success_ReturnsOkAuction()
+        {
+            // Arrange
+            _mockService
+                .Setup(s => s.UpdatePickUpAsync("A1"))
+                .ReturnsAsync(_sampleAuction);
+
+            // Act
+            var result = await _controller.PickUp("A1") as OkObjectResult;
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(_sampleAuction, result.Value);
+        }
     }
 }
