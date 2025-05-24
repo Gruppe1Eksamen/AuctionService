@@ -1,5 +1,6 @@
 ﻿using AuctionService.Models;
 using AuctionService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuctionServiceAPI.Controllers;
@@ -49,7 +50,6 @@ public class AuctionController : ControllerBase
     {
         try
         {
-            // hvis status ikke er angivet, retunerer den alle
             var auctions = await _auctionService.GetAuctionsByStatusAsync(status);
             return Ok(auctions);
         }
@@ -159,34 +159,43 @@ public class AuctionController : ControllerBase
     
     
     //Listings
-    [HttpGet("listings")]
-    public async Task<IActionResult> GetAllListings()
+    // [HttpGet("listings")]
+    // public async Task<IActionResult> GetAllListings()
+    // {
+    //     try
+    //     {
+    //         // hvis status ikke er angivet, retunerer den alle
+    //         var listings = await _auctionService.ReturnAllListings();
+    //         return Ok(listings);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         return BadRequest(new { error = ex.Message });
+    //     }
+    // }
+    //
+    // [HttpGet("external-listings")]
+    // public async Task<IActionResult> GetExternalListings()
+    // {
+    //     var validateUrl = $"{_listingServiceBase}/api/listing";
+    //
+    //     _logger.LogInformation("Kalder ListingService på {Url}", validateUrl);
+    //     var response = await _httpClient.GetAsync(validateUrl);
+    //     if (response.IsSuccessStatusCode)
+    //     {
+    //         var listings = await response.Content.ReadFromJsonAsync<List<Listing>>();
+    //         return Ok(listings);
+    //     }
+    //
+    //     return BadRequest(new { error = "Failed to fetch listings from external service." });
+    // }
+    
+    [Authorize]
+    [HttpGet("authcheck")]
+    public async Task<IActionResult> Get()
     {
-        try
-        {
-            // hvis status ikke er angivet, retunerer den alle
-            var listings = await _auctionService.ReturnAllListings();
-            return Ok(listings);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
+        return Ok("You're authorized");
     }
     
-    [HttpGet("external-listings")]
-    public async Task<IActionResult> GetExternalListings()
-    {
-        var validateUrl = $"{_listingServiceBase}/api/listing";
-
-        _logger.LogInformation("Kalder ListingService på {Url}", validateUrl);
-        var response = await _httpClient.GetAsync(validateUrl);
-        if (response.IsSuccessStatusCode)
-        {
-            var listings = await response.Content.ReadFromJsonAsync<List<Listing>>();
-            return Ok(listings);
-        }
-
-        return BadRequest(new { error = "Failed to fetch listings from external service." });
-    }
+    
 }
