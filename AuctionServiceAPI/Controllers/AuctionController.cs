@@ -10,7 +10,6 @@ namespace AuctionServiceAPI.Controllers;
 public class AuctionController : ControllerBase
 {
     private readonly IAuctionMongoDBService _auctionService;
-    //tilføjet for listing
     private readonly IConfiguration _config;
     private readonly ILogger<AuctionController> _logger;
     private readonly HttpClient _httpClient;
@@ -20,13 +19,13 @@ public class AuctionController : ControllerBase
     {
         _auctionService = auctionService;
         
-        //tilføjet for listing
         _config = config;
         _logger = logger;
         _httpClient = httpClient;
         _listingServiceBase = _config["LISTINGSERVICE_ENDPOINT"] ?? "http://localhost:5077";
     }
 
+    [Authorize]
     [HttpPost("generate-from-listings")]
     public async Task<IActionResult> GenerateFromListings()
     {
@@ -45,6 +44,7 @@ public class AuctionController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpGet]
     public async Task<IActionResult> GetAllAuctions([FromQuery] AuctionStatus? status)
     {
@@ -59,7 +59,7 @@ public class AuctionController : ControllerBase
         }
     }
 
-    
+    [Authorize]
     [HttpPost("{auctionId}/bid")]
     public async Task<IActionResult> PlaceBid(string auctionId, [FromBody] BidRequest request)
     {
@@ -74,6 +74,7 @@ public class AuctionController : ControllerBase
         }
     }
     
+    [Authorize]
     [HttpPost("{auctionId}/open")]
     public async Task<IActionResult> Open(string auctionId)
     {
@@ -92,6 +93,7 @@ public class AuctionController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpPost("{auctionId}/close")]
     public async Task<IActionResult> Close(string auctionId)
     {
@@ -110,6 +112,7 @@ public class AuctionController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpGet("{auctionId}/winner")]
     public async Task<IActionResult> GetWinner(string auctionId)
     {
@@ -131,6 +134,8 @@ public class AuctionController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
+    
+    [Authorize]
     [HttpPut("{auctionId}/pickup")]
     public async Task<IActionResult> PickUp(string auctionId)
     {
@@ -151,44 +156,12 @@ public class AuctionController : ControllerBase
         }
     }
     
+    [AllowAnonymous]
     [HttpGet("ping")]
     public ActionResult<bool> Ping()
     {
         return Ok(true);
     }
-    
-    
-    //Listings
-    // [HttpGet("listings")]
-    // public async Task<IActionResult> GetAllListings()
-    // {
-    //     try
-    //     {
-    //         // hvis status ikke er angivet, retunerer den alle
-    //         var listings = await _auctionService.ReturnAllListings();
-    //         return Ok(listings);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         return BadRequest(new { error = ex.Message });
-    //     }
-    // }
-    //
-    // [HttpGet("external-listings")]
-    // public async Task<IActionResult> GetExternalListings()
-    // {
-    //     var validateUrl = $"{_listingServiceBase}/api/listing";
-    //
-    //     _logger.LogInformation("Kalder ListingService på {Url}", validateUrl);
-    //     var response = await _httpClient.GetAsync(validateUrl);
-    //     if (response.IsSuccessStatusCode)
-    //     {
-    //         var listings = await response.Content.ReadFromJsonAsync<List<Listing>>();
-    //         return Ok(listings);
-    //     }
-    //
-    //     return BadRequest(new { error = "Failed to fetch listings from external service." });
-    // }
     
     [Authorize]
     [HttpGet("authcheck")]
@@ -196,6 +169,4 @@ public class AuctionController : ControllerBase
     {
         return Ok("You're authorized");
     }
-    
-    
 }
