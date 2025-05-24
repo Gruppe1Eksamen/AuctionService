@@ -1,0 +1,44 @@
+name: .NET CI
+
+# Kør på push og pull_request til main (tilpas evt. branch-navn)
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Hent koden
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Installer .NET SDK
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      # 3. Cache NuGet-pakker for hurtigere builds
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      # 4. Gendan dependencies
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # 5. Byg
+      - name: Build solution
+        run: dotnet build --no-restore --configuration Release
+
+      # 6. Kør tests
+      - name: Run tests
+        run: dotnet test --no-build --verbosity normal --configuration Release
