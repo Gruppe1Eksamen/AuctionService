@@ -11,10 +11,9 @@ using VaultSharp.V1.Commons;
 using NLog;
 using NLog.Web;
 
-// Setup NLog
+
 var logger = LogManager
     .Setup()
-    .LoadConfigurationFromFile("NLog.config")
     .GetCurrentClassLogger();
 
 logger.Debug("Init main");
