@@ -26,7 +26,7 @@ public class AuctionController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("generate-from-listings")]
+    [HttpPost("generate")]
     public async Task<IActionResult> GenerateFromListings()
     {
         try

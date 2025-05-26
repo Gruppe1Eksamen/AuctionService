@@ -27,7 +27,6 @@ namespace AuctionService.Services
 
         public async Task<List<Auction>> CreateAuctionsFromListingsAsync()
         {
-            //henter listings
             var listings = await _listingClient.GetAllListingsAsync();
             if (listings == null || listings.Count == 0)
             {
@@ -39,7 +38,7 @@ namespace AuctionService.Services
 
             foreach (var listing in listings)
             {
-                //hvis de allerede er auctioner, blive de skippet
+                //hvis de allerede er auctioner, bliver de skippet
                 var exists = await _context
                     .Collection
                     .Find(a => a.ListingId == listing.Id)
@@ -76,8 +75,8 @@ namespace AuctionService.Services
         public async Task<Auction> PlaceBidAsync(string auctionId, BidRequest bid)
         {
             var filter = Builders<Auction>.Filter.And(
-                //  finder auction
-Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
+                // finder auction
+                Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
 
                 // tjekker at den er åben
                 Builders<Auction>.Filter.Eq(a => a.Status, AuctionStatus.Open),
@@ -102,7 +101,6 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
             if (result.ModifiedCount == 0)
                 throw new Exception("Bid must be higher than the current bid.");
 
-            // use our helper instead of calling the extension directly
             var updatedAuction = await FindByIdAsync(auctionId);
             return updatedAuction!;
         }
@@ -216,7 +214,7 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
         }
 
 
-//hjælpemedtode
+        //hjælpemedtode
         protected virtual Task<Auction?> FindByIdAsync(string auctionId)
         {
             return _context
@@ -227,7 +225,6 @@ Builders<Auction>.Filter.Eq(a => a.Id, auctionId),
         
         public async Task<List<Listing>> ReturnAllListings()
         {
-            //henter listings
             var listings = await _listingClient.GetAllListingsAsync();
             if (listings == null || listings.Count == 0)
             {

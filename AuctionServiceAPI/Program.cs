@@ -14,7 +14,6 @@ using NLog.Web;
 // Setup NLog
 var logger = LogManager
     .Setup()
-    .LoadConfigurationFromFile("NLog.config")
     .GetCurrentClassLogger();
 
 logger.Debug("Init main");
@@ -118,7 +117,6 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// app.UseHttpsRedirection(); // Enable if needed
 app.UseAuthentication();
 app.UseAuthorization();
 

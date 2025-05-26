@@ -11,9 +11,11 @@ public class Auction
     public string Id { get; set; }
     
     public string ListingId { get; set; }
+    
     public Listing ListingSnapshot { get; set; }
     
     public float Bid { get; set; }
+    
     public string BidUserId { get; set; }
     
     public DateTime? EndsAt { get; set; }

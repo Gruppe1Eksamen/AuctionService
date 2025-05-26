@@ -26,33 +26,6 @@ namespace AuctionService.Services
             _listingServiceBase = _config["LISTINGSERVICE_ENDPOINT"];
 
         }
-
-        // public async Task<List<Listing>> GetAllListingsAsync()
-        // {
-        //     var validateUrl = $"{_listingServiceBase}/api/listing";
-        //     _logger.LogInformation("Kalder UserService på {Url}", validateUrl);
-        //     
-        //     // Vi bruger den BaseAddress, som du har sat i Program.cs via AddHttpClient
-        //     // var response = await _httpClient.GetAsync("/api/listings/");
-        //     
-        //     var response = await _httpClient.GetAsync(validateUrl);
-        //     
-        //
-        //     
-        //     if (!response.IsSuccessStatusCode)
-        //     {
-        //         // Log evt. her, hvis du har en ILogger til rådighed
-        //         return new List<Listing>();
-        //     }
-        //
-        //     // Deserialiser direkte fra stream for bedre performance
-        //     await using var stream = await response.Content.ReadAsStreamAsync();
-        //     var listings = await JsonSerializer
-        //                        .DeserializeAsync<List<Listing>>(stream, _jsonOptions)
-        //                    ?? new List<Listing>();
-        //
-        //     return listings;
-        // }
         
         public async Task<List<Listing>> GetAllListingsAsync()
         {
