@@ -99,7 +99,7 @@ namespace AuctionService.Services
 
             var result = await _context.Collection.UpdateOneAsync(filter, update);
             if (result.ModifiedCount == 0)
-                throw new Exception("Bid must be higher than the current bid.");
+                throw new Exception("Unable to place bid.");
 
             var updatedAuction = await FindByIdAsync(auctionId);
             return updatedAuction!;
@@ -234,9 +234,24 @@ namespace AuctionService.Services
 
             return listings;
         }
-    }
-    
-    
-    
-    
+
+        public async Task<List<Auction>> GetAuctionsByWinnerId(string winnerId)
+        {
+
+            var filter = Builders<Auction>.Filter.And(
+                 Builders<Auction>.Filter.Eq(a => a.Status, AuctionStatus.Closed),
+                 Builders<Auction>.Filter.Eq(a => a.WinnerUserId, winnerId)
+             );
+
+            return await _context
+                .Collection
+                .Find(filter)
+                .ToListAsync();
+        }
+        }
+
 }
+    
+    
+    
+    
