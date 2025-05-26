@@ -18,7 +18,6 @@ var logger = LogManager
 
 logger.Debug("Init main");
 
-// Vault setup before app builder
 var endPoint = Environment.GetEnvironmentVariable("VAULT_ENDPOINT") ?? "https://localhost:8201";
 logger.Info($"VAULT_ENDPOINT: {endPoint}");
 logger.Info("Auction Logtest");
