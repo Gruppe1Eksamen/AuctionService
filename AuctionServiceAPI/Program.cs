@@ -11,7 +11,7 @@ using VaultSharp.V1.Commons;
 using NLog;
 using NLog.Web;
 
-// Setup NLog
+
 var logger = LogManager
     .Setup()
     .GetCurrentClassLogger();

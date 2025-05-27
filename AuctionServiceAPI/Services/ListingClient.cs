@@ -30,13 +30,16 @@ namespace AuctionService.Services
         public async Task<List<Listing>> GetAllListingsAsync()
         {
             var validateUrl = $"{_listingServiceBase}/api/listing";
-
+        
             _logger.LogInformation("Kalder ListingService på {Url}", validateUrl);
             var response = await _httpClient.GetAsync(validateUrl);
-
+        
             var listings = await response.Content.ReadFromJsonAsync<List<Listing>>();
             return listings;
-
+        
         }
+        
+        
+        
     }
 }

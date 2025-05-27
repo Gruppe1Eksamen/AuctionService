@@ -136,6 +136,24 @@ public class AuctionController : ControllerBase
     }
     
     [Authorize]
+    [HttpGet("winner/{winnerId}")]
+    public async Task<IActionResult> GetAuctionsByWinner(string winnerId)
+    {
+        if (string.IsNullOrWhiteSpace(winnerId))
+            return BadRequest(new { error = "winnerId must be provided" });
+
+        try
+        {
+            var auctions = await _auctionService.GetAuctionsByWinnerId(winnerId);
+            return Ok(auctions);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest();
+        }
+    }
+    
+    [Authorize]
     [HttpPut("{auctionId}/pickup")]
     public async Task<IActionResult> PickUp(string auctionId)
     {
@@ -185,5 +203,13 @@ public class AuctionController : ControllerBase
     public async Task<IActionResult> Get()
     {
         return Ok("You're authorized");
+    }
+    
+    [AllowAnonymous]
+    [HttpGet("testlist")]
+    public async Task<IEnumerable<Listing>> GetAllListings()
+    {
+        var listings = await _auctionService.ReturnAllListings();
+        return listings;
     }
 }
