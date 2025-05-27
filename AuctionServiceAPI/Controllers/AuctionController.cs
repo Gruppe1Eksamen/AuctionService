@@ -25,7 +25,7 @@ public class AuctionController : ControllerBase
         _listingServiceBase = _config["LISTINGSERVICE_ENDPOINT"] ?? "http://localhost:5077";
     }
 
-    [Authorize]
+    [AllowAnonymous]
     [HttpPost("generate")]
     public async Task<IActionResult> GenerateFromListings()
     {
