@@ -17,8 +17,11 @@ public interface IAuctionMongoDBService
     
     Task<List<Auction>> GetAuctionsByStatusAsync(AuctionStatus? status);
 
-    //test
     Task<List<Listing>> ReturnAllListings();
+    
+    Task<List<Auction>> GetAuctionsByWinnerId(string winnerId);
+
+
 
 
 
