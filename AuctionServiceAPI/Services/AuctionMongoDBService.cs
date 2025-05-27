@@ -251,20 +251,6 @@ namespace AuctionService.Services
 
             return listings;
         }
-
-        public async Task<List<Auction>> GetAuctionsByWinnerId(string winnerId)
-        {
-
-            var filter = Builders<Auction>.Filter.And(
-                 Builders<Auction>.Filter.Eq(a => a.Status, AuctionStatus.Closed),
-                 Builders<Auction>.Filter.Eq(a => a.WinnerUserId, winnerId)
-             );
-
-            return await _context
-                .Collection
-                .Find(filter)
-                .ToListAsync();
-        }
         }
 
 }

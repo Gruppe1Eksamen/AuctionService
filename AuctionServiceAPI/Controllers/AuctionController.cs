@@ -173,23 +173,6 @@ public class AuctionController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
-    [Authorize]
-    [HttpGet("winner/{winnerId}")]
-    public async Task<IActionResult> GetAuctionsByWinner(string winnerId)
-    {
-        if (string.IsNullOrWhiteSpace(winnerId))
-            return BadRequest(new { error = "winnerId must be provided" });
-
-        try
-        {
-            var auctions = await _auctionService.GetAuctionsByWinnerId(winnerId);
-            return Ok(auctions);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest();
-        }
-    }
     
     [AllowAnonymous]
     [HttpGet("ping")]
