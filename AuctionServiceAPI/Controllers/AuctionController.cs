@@ -187,12 +187,4 @@ public class AuctionController : ControllerBase
     {
         return Ok("You're authorized");
     }
-    
-    [AllowAnonymous]
-    [HttpGet("testlist")]
-    public async Task<IEnumerable<Listing>> GetAllListings()
-    {
-        var listings = await _auctionService.ReturnAllListings();
-        return listings;
-    }
 }
